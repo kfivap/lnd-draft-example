@@ -12,8 +12,13 @@ const loaderOptions = {
 };
 const { exec } = require("child_process");
 
+let produce_blocks = true
+
 class Utils {
   static async generateBtcBlock(quantity = 1) {
+    if (!produce_blocks) {
+      return
+    }
     await new Promise((resolve, reject) => {
       exec(`docker exec  btcd /start-btcctl.sh generate ${quantity}`, (error, stdout, stderr) => {
         if (error) {
@@ -32,6 +37,27 @@ class Utils {
       });
     })
   }
+
+  static async delay(ms) {
+    return new Promise(r => setTimeout(r, ms))
+  }
+
+  static async timerWithCountDown(seconds, everyX) {
+    console.log(`${new Date()} start timer for ${seconds}`)
+    let secondsLeft = seconds
+    let interval
+    await new Promise((resolve) => {
+      interval = setInterval(() => {
+        if (secondsLeft % everyX === 0) {
+          console.log(`${new Date()} timer left ${secondsLeft}`)
+        }
+        if (secondsLeft-- === 0) {
+          resolve()
+        }
+      }, 1000)
+    })
+    clearInterval(interval)
+  }
 }
 
 
@@ -46,6 +72,10 @@ const ALICE_HOST = '172.18.0.3'
 const BOB_MARACOON_PATH = "/mnt/docker/volumes/simnet_lnd_bob/_data/data/chain/bitcoin/simnet/admin.macaroon"
 const BOB_TLS_PATH = '/mnt/docker/volumes/simnet_lnd_bob/_data/tls.cert'
 const BOB_HOST = '172.18.0.4'
+
+const CHARLIE_MARACOON_PATH = "/mnt/docker/volumes/simnet_lnd_charlie/_data/data/chain/bitcoin/simnet/admin.macaroon"
+const CHARLIE_TLS_PATH = '/mnt/docker/volumes/simnet_lnd_charlie/_data/tls.cert'
+const CHARLIE_HOST = '172.18.0.5'
 
 
 
@@ -117,7 +147,7 @@ class UserLightning {
 
   async disconnectAllPeers(request) {
     const { peers } = await this.listPeers({ latest_error: false })
-    console.log('disconnectAllPeers peers', peers)
+    console.log('disconnectAllPeers peers', peers.length)
     for (const peer of peers) {
       const disconnected = await this.disconnectPeer({ pub_key: peer.pub_key })
       console.log('disconnectAllPeersd disconnected', disconnected)
@@ -200,17 +230,17 @@ class UserLightning {
 
 const alice = new UserLightning('alice', ALICE_MARACOON_PATH, ALICE_TLS_PATH, ALICE_HOST)
 const bob = new UserLightning('bob', BOB_MARACOON_PATH, BOB_TLS_PATH, BOB_HOST)
+const charlie = new UserLightning('charlie', CHARLIE_MARACOON_PATH, CHARLIE_TLS_PATH, CHARLIE_HOST)
 
 async function main() {
-  // return
   await alice.disconnectAllPeers()
+  await bob.disconnectAllPeers()
+  await charlie.disconnectAllPeers()
 
-
-  // const balance = await alice.walletBalance(request)
-  // console.log(balance)
   const bobPubKey = await bob.getIdenityPubkey()
-  // console.log(bobPubKey)
-  const connectResponse = await alice.connectPeer({
+  const charliePubKey = await charlie.getIdenityPubkey()
+
+  const aliceBobConnectResponse = await alice.connectPeer({
     addr: {
       pubkey: bobPubKey,
       host: BOB_HOST
@@ -218,47 +248,89 @@ async function main() {
     perm: true,
     timeout: 10000
   })
-  console.log('connectResponse', connectResponse)
+  console.log('aliceBobConnectResponse', aliceBobConnectResponse)
+  const charlieBobConnectResponse = await charlie.connectPeer({
+    addr: {
+      pubkey: bobPubKey,
+      host: BOB_HOST
+    },
+    perm: true,
+    timeout: 10000
+  })
+  console.log('charlieBobConnectResponse', charlieBobConnectResponse)
   setInterval(() => {
     Utils.generateBtcBlock()
   }, 1000)
+  await Utils.delay(1500)
   await alice.closeAllChannels()
+  await bob.closeAllChannels()
+  await charlie.closeAllChannels()
 
   // const listPeers = await alice.listPeers({ latest_error: false })
   // console.log(listPeers)
 
-
   console.log('before open channel')
   try {
-
-    const openChannel = await alice.openChannel({
+    await alice.openChannel({
       node_pubkey_string: bobPubKey,
       node_pubkey: Buffer.from(bobPubKey, 'hex'),
       local_funding_amount: 100000
     })
-  } catch(e){
+    await bob.openChannel({
+      node_pubkey_string: charliePubKey,
+      node_pubkey: Buffer.from(charliePubKey, 'hex'),
+      local_funding_amount: 100000
+    })
+  } catch (e) {
     console.log(e)
     process.exit()
   }
-    
+
   // await new Promise((r) => setTimeout(r, 3000))
 
   // const channels = await alice.listChannels({})
   // console.log(channels)
 
-  const invoice = await bob.addInvoice({
-    value: 1000
-  })
   console.log('alice wallet balance', await alice.walletBalance(request))
   console.log('bob wallet balance', await bob.walletBalance(request))
-  console.log('invoince paymnet_request', invoice)
+  console.log('charlie wallet balance', await charlie.walletBalance(request))
 
-  const paidResponse = await alice.sendPayment({ payment_request: invoice.payment_request })
-  console.log('paidResponse', paidResponse)
+
+  //pay from alice to bob (alice-bob) SIGNLEHOP
+  const bobInvoice = await bob.addInvoice({
+    value: 1000
+  })
+  const aliceBobPaymentResponse = await alice.sendPayment({ payment_request: bobInvoice.payment_request })
+  console.log('aliceBobPaymentResponse', aliceBobPaymentResponse)
+
+  // pay from alice to charlie (alice-bob-charlie) MULTIHOP
+  const charlieInvoice = await charlie.addInvoice({
+    value: 1000
+  })
+  try {
+    let payment_error
+    let attemptCounter = 0
+    do {
+      await Utils.timerWithCountDown(5, 5)
+      produce_blocks = false
+
+      attemptCounter++
+      const aliceCharliePaymentResponse = await alice.sendPayment({ payment_request: charlieInvoice.payment_request })
+      console.log('aliceCharliePaymentResponse', aliceCharliePaymentResponse, 'attempt', attemptCounter)
+      payment_error = aliceCharliePaymentResponse.payment_error
+    } while (payment_error)
+
+    produce_blocks = true
+  } catch (e) {
+    console.error(e)
+    process.exit()
+  }
+
 
   while (true) {
     try {
       await alice.closeAllChannels()
+      await charlie.closeAllChannels()
       break
     } catch (e) {
       console.log(e)
@@ -266,11 +338,14 @@ async function main() {
     }
   }
 
-  const disconnectPeer = await alice.disconnectPeer({ pub_key: bobPubKey })
-  console.log(disconnectPeer)
+  // await alice.disconnectPeer({ pub_key: bobPubKey })
+  await alice.disconnectAllPeers()
+  await bob.disconnectAllPeers()
+  await charlie.disconnectAllPeers()
 
   console.log('alice wallet balance', await alice.walletBalance(request))
   console.log('bob wallet balance', await bob.walletBalance(request))
+  console.log('charlie wallet balance', await charlie.walletBalance(request))
   process.exit()
 }
 main()
