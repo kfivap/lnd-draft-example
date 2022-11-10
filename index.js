@@ -1,4 +1,4 @@
-const { InvoiceLightning } = require("./src/invoce_lightning");
+const { InvoiceLightning } = require("./src/invoice_lightning");
 const { UserLightning } = require("./src/user_lightning");
 const { Utils } = require("./src/utils");
 const { config } = require('./src/config')
