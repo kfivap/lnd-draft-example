@@ -1,16 +1,8 @@
 const fs = require('fs');
 const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
+const { config } = require('./config')
 
-const PROTO_PATH = '/mnt/storage/blockchain/lnd/lnrpc/lightning.proto'
-const INVOICES_PROTO_PATH = '/mnt/storage/blockchain/lnd/lnrpc/invoicesrpc/invoices.proto'
-const loaderOptions = {
-    keepCase: true,
-    longs: String,
-    enums: String,
-    defaults: true,
-    oneofs: true
-};
 
 exports.InvoiceLightning = class InvoiceLightning {
     constructor(name, maracoon, tls, host) {
@@ -23,10 +15,10 @@ exports.InvoiceLightning = class InvoiceLightning {
     }
 
     _init() {
-        const packageDefinition = protoLoader.loadSync([PROTO_PATH, INVOICES_PROTO_PATH], loaderOptions);
+        const packageDefinition = protoLoader.loadSync([config.PROTO_PATH, config.INVOICES_PROTO_PATH], config.loaderOptions);
         const invoicesrpc = grpc.loadPackageDefinition(packageDefinition).invoicesrpc;
         const macaroon = fs.readFileSync(this._maracoon).toString('hex');
-        process.env.GRPC_SSL_CIPHER_SUITES = 'HIGH+ECDSA';
+        process.env.GRPC_SSL_CIPHER_SUITES = config.GRPC_SSL_CIPHER_SUITES;
         const lndCert = fs.readFileSync(this._tls);
         const sslCreds = grpc.credentials.createSsl(lndCert);
         const macaroonCreds = grpc.credentials.createFromMetadataGenerator(function (args, callback) {
@@ -43,19 +35,19 @@ exports.InvoiceLightning = class InvoiceLightning {
         return new Promise((resolve, reject) => {
             call.on('data', (response) => {
                 // A response was received from the server.
-                console.trace(this._name, 'subscribeSingleInvoice data', response);
+                console.log(this._name, 'subscribeSingleInvoice data', response);
             });
             call.on('status', (status) => {
                 // The current status of the stream.
-                console.trace(this._name, 'subscribeSingleInvoice status', status);
+                console.log(this._name, 'subscribeSingleInvoice status', status);
             });
             call.on('error', (error) => {
-                console.trace(this._name, 'subscribeSingleInvoice error', error);
+                console.log(this._name, 'subscribeSingleInvoice error', error);
                 reject(error)
             })
             call.on('end', () => {
                 // The server has closed the stream.
-                console.trace(this._name, 'subscribeSingleInvoice end');
+                console.log(this._name, 'subscribeSingleInvoice end');
                 resolve()
             });
 

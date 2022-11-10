@@ -1,24 +1,13 @@
 const { InvoiceLightning } = require("./src/invoce_lightning");
 const { UserLightning } = require("./src/user_lightning");
 const { Utils } = require("./src/utils");
+const { config } = require('./src/config')
 
-process.env.GRPC_SSL_CIPHER_SUITES = 'HIGH+ECDSA';
+process.env.GRPC_SSL_CIPHER_SUITES = config.GRPC_SSL_CIPHER_SUITES;;
 
-const ALICE_MARACOON_PATH = "/mnt/docker/volumes/simnet_lnd_alice/_data/data/chain/bitcoin/simnet/admin.macaroon"
-const ALICE_TLS_PATH = '/mnt/docker/volumes/simnet_lnd_alice/_data/tls.cert'
-const ALICE_HOST = '172.18.0.3'
-
-const BOB_MARACOON_PATH = "/mnt/docker/volumes/simnet_lnd_bob/_data/data/chain/bitcoin/simnet/admin.macaroon"
-const BOB_TLS_PATH = '/mnt/docker/volumes/simnet_lnd_bob/_data/tls.cert'
-const BOB_HOST = '172.18.0.4'
-
-const CHARLIE_MARACOON_PATH = "/mnt/docker/volumes/simnet_lnd_charlie/_data/data/chain/bitcoin/simnet/admin.macaroon"
-const CHARLIE_TLS_PATH = '/mnt/docker/volumes/simnet_lnd_charlie/_data/tls.cert'
-const CHARLIE_HOST = '172.18.0.5'
-
-const alice = new UserLightning('alice', ALICE_MARACOON_PATH, ALICE_TLS_PATH, ALICE_HOST)
-const bob = new UserLightning('bob', BOB_MARACOON_PATH, BOB_TLS_PATH, BOB_HOST)
-const charlie = new UserLightning('charlie', CHARLIE_MARACOON_PATH, CHARLIE_TLS_PATH, CHARLIE_HOST)
+const alice = new UserLightning('alice', config.ALICE_MARACOON_PATH, config.ALICE_TLS_PATH, config.ALICE_HOST)
+const bob = new UserLightning('bob', config.BOB_MARACOON_PATH, config.BOB_TLS_PATH, config.BOB_HOST)
+const charlie = new UserLightning('charlie', config.CHARLIE_MARACOON_PATH, config.CHARLIE_TLS_PATH, config.CHARLIE_HOST)
 const UtilsInstance = new Utils()
 
 async function main() {
@@ -32,7 +21,7 @@ async function main() {
   const aliceBobConnectResponse = await alice.connectPeer({
     addr: {
       pubkey: bobPubKey,
-      host: BOB_HOST
+      host: config.BOB_HOST
     },
     perm: true,
     timeout: 10000
@@ -41,7 +30,7 @@ async function main() {
   const charlieBobConnectResponse = await charlie.connectPeer({
     addr: {
       pubkey: bobPubKey,
-      host: BOB_HOST
+      host: config.BOB_HOST
     },
     perm: true,
     timeout: 10000
@@ -69,7 +58,7 @@ async function main() {
     await bob.openChannel({
       node_pubkey_string: charliePubKey,
       node_pubkey: Buffer.from(charliePubKey, 'hex'),
-      local_funding_amount: 100000
+      local_funding_amount: 1000000
     })
   } catch (e) {
     console.log(e)
@@ -81,11 +70,11 @@ async function main() {
   console.log('alice wallet balance', await alice.walletBalance({}))
   console.log('bob wallet balance', await bob.walletBalance({}))
   console.log('charlie wallet balance', await charlie.walletBalance({}))
-  const bobInvoices = new InvoiceLightning('bob', BOB_MARACOON_PATH, BOB_TLS_PATH, BOB_HOST)
+  const bobInvoices = new InvoiceLightning('bob', config.BOB_MARACOON_PATH, config.BOB_TLS_PATH, config.BOB_HOST)
 
   //pay from alice to bob (alice-bob) SIGNLEHOP
   const bobInvoice = await bob.addInvoice({
-    value: 1000
+    value: 10000
   })
 
   //should using await until invoice will be payed , but pay in same process, so its impossible 
@@ -94,10 +83,9 @@ async function main() {
   console.log('aliceBobPaymentResponse', aliceBobPaymentResponse)
 
   // pay from alice to charlie (alice-bob-charlie) MULTIHOP
-
-  const charlieInvoices = new InvoiceLightning('bob', CHARLIE_MARACOON_PATH, CHARLIE_TLS_PATH, CHARLIE_HOST)
+  const charlieInvoices = new InvoiceLightning('bob', config.CHARLIE_MARACOON_PATH, config.CHARLIE_TLS_PATH, config.CHARLIE_HOST)
   const charlieInvoice = await charlie.addInvoice({
-    value: 1000
+    value: 10000
   })
   charlieInvoices.subscribeSingleInvoice({ r_hash: charlieInvoice.r_hash })
 

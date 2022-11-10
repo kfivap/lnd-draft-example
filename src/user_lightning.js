@@ -1,14 +1,7 @@
 const fs = require('fs');
 const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
-const loaderOptions = {
-    keepCase: true,
-    longs: String,
-    enums: String,
-    defaults: true,
-    oneofs: true
-};
-const PROTO_PATH = '/mnt/storage/blockchain/lnd/lnrpc/lightning.proto'
+const { config } = require('./config')
 
 exports.UserLightning = class UserLightning {
     constructor(name, maracoon, tls, host) {
@@ -21,7 +14,7 @@ exports.UserLightning = class UserLightning {
     }
 
     _init() {
-        const packageDefinition = protoLoader.loadSync(PROTO_PATH, loaderOptions);
+        const packageDefinition = protoLoader.loadSync(config.PROTO_PATH,  config.loaderOptions);
         const lnrpc = grpc.loadPackageDefinition(packageDefinition).lnrpc;
         const macaroon = fs.readFileSync(this._maracoon).toString('hex');
         const lndCert = fs.readFileSync(this._tls);
