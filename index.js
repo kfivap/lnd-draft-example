@@ -22,12 +22,6 @@ const charlie = new UserLightning('charlie', CHARLIE_MARACOON_PATH, CHARLIE_TLS_
 const UtilsInstance = new Utils()
 
 async function main() {
-  //   const charlieInvoice1 = await charlie.addInvoice({
-  //     value: 1000
-  //   })
-  //   console.log(111111, charlieInvoice1)
-  // // await  invoices.subscribeSingleInvoice({r_hash: charlieInvoice1.r_hash})
-  // console.log(22222)
   await alice.disconnectAllPeers()
   await bob.disconnectAllPeers()
   await charlie.disconnectAllPeers()
