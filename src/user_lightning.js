@@ -106,10 +106,10 @@ exports.UserLightning = class UserLightning {
 
     async closeChannel(request) {
         const call = this._lightning.closeChannel(request)
-        console.log('closeChannel', request)
+        // console.log('closeChannel', request)
         return new Promise((resolve, reject) => {
             call.on('data', function (response) {
-                console.log('closeChannel data', response);
+                // console.log('closeChannel data', response);
             });
             // call.on('status', function (status) {
             //   console.log('closeChannel status', status);

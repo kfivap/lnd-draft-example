@@ -1,3 +1,4 @@
+const { InvoiceLightning } = require("./src/invoce_lightning");
 const { UserLightning } = require("./src/user_lightning");
 const { Utils } = require("./src/utils");
 
@@ -18,9 +19,15 @@ const CHARLIE_HOST = '172.18.0.5'
 const alice = new UserLightning('alice', ALICE_MARACOON_PATH, ALICE_TLS_PATH, ALICE_HOST)
 const bob = new UserLightning('bob', BOB_MARACOON_PATH, BOB_TLS_PATH, BOB_HOST)
 const charlie = new UserLightning('charlie', CHARLIE_MARACOON_PATH, CHARLIE_TLS_PATH, CHARLIE_HOST)
-const UtilsInstance= new Utils()
+const UtilsInstance = new Utils()
 
 async function main() {
+  //   const charlieInvoice1 = await charlie.addInvoice({
+  //     value: 1000
+  //   })
+  //   console.log(111111, charlieInvoice1)
+  // // await  invoices.subscribeSingleInvoice({r_hash: charlieInvoice1.r_hash})
+  // console.log(22222)
   await alice.disconnectAllPeers()
   await bob.disconnectAllPeers()
   await charlie.disconnectAllPeers()
@@ -80,19 +87,26 @@ async function main() {
   console.log('alice wallet balance', await alice.walletBalance({}))
   console.log('bob wallet balance', await bob.walletBalance({}))
   console.log('charlie wallet balance', await charlie.walletBalance({}))
-
+  const bobInvoices = new InvoiceLightning('bob', BOB_MARACOON_PATH, BOB_TLS_PATH, BOB_HOST)
 
   //pay from alice to bob (alice-bob) SIGNLEHOP
   const bobInvoice = await bob.addInvoice({
     value: 1000
   })
+
+  //should using await until invoice will be payed , but pay in same process, so its impossible 
+  bobInvoices.subscribeSingleInvoice({ r_hash: bobInvoice.r_hash })
   const aliceBobPaymentResponse = await alice.sendPayment({ payment_request: bobInvoice.payment_request })
   console.log('aliceBobPaymentResponse', aliceBobPaymentResponse)
 
   // pay from alice to charlie (alice-bob-charlie) MULTIHOP
+
+  const charlieInvoices = new InvoiceLightning('bob', CHARLIE_MARACOON_PATH, CHARLIE_TLS_PATH, CHARLIE_HOST)
   const charlieInvoice = await charlie.addInvoice({
     value: 1000
   })
+  charlieInvoices.subscribeSingleInvoice({ r_hash: charlieInvoice.r_hash })
+
   try {
     let payment_error
     let attemptCounter = 0
