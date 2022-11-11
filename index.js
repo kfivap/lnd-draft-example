@@ -67,9 +67,9 @@ async function main() {
   // const channels = await alice.listChannels({})
   // console.log(channels)
 
-  console.log('alice wallet balance', await alice.walletBalance({}))
-  console.log('bob wallet balance', await bob.walletBalance({}))
-  console.log('charlie wallet balance', await charlie.walletBalance({}))
+  const aliceWalletBalance = await alice.walletBalance({})
+  const bobWalletBalance = await bob.walletBalance({})
+  const charlieWalletBalance = await charlie.walletBalance({})
   const bobInvoices = new InvoiceLightning('bob', config.BOB_MARACOON_PATH, config.BOB_TLS_PATH, config.BOB_HOST)
 
   //pay from alice to bob (alice-bob) SIGNLEHOP
@@ -100,9 +100,17 @@ async function main() {
       const aliceCharliePaymentResponse = await alice.sendPayment({ payment_request: charlieInvoice.payment_request })
       console.log('aliceCharliePaymentResponse', aliceCharliePaymentResponse, 'attempt', attemptCounter)
       payment_error = aliceCharliePaymentResponse.payment_error
+      try {
+        const routes = await alice.queryRoutes({ pub_key: charliePubKey, amt: 10000 })
+        console.log(routes.routes[0])
+      } catch (e) {
+        console.log(e)
+      }
     } while (payment_error)
 
     UtilsInstance.setProduceBlocks(true)
+    await Utils.timerWithCountDown(1, 5)
+
   } catch (e) {
     console.error(e)
     process.exit()
@@ -124,9 +132,9 @@ async function main() {
   await bob.disconnectAllPeers()
   await charlie.disconnectAllPeers()
 
-  console.log('alice wallet balance', await alice.walletBalance({}))
-  console.log('bob wallet balance', await bob.walletBalance({}))
-  console.log('charlie wallet balance', await charlie.walletBalance({}))
+  console.log('alice wallet balance', UserLightning.countDeltaBalance(aliceWalletBalance, await alice.walletBalance({})))
+  console.log('bob wallet balance', UserLightning.countDeltaBalance(bobWalletBalance, await bob.walletBalance({})))
+  console.log('charlie wallet balance', UserLightning.countDeltaBalance(charlieWalletBalance, await charlie.walletBalance({})))
   process.exit()
 }
 main()
