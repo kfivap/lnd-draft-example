@@ -14,7 +14,7 @@ exports.UserLightning = class UserLightning {
     }
 
     _init() {
-        const packageDefinition = protoLoader.loadSync(config.PROTO_PATH,  config.loaderOptions);
+        const packageDefinition = protoLoader.loadSync(config.PROTO_PATH, config.loaderOptions);
         const lnrpc = grpc.loadPackageDefinition(packageDefinition).lnrpc;
         const macaroon = fs.readFileSync(this._maracoon).toString('hex');
         const lndCert = fs.readFileSync(this._tls);
@@ -147,5 +147,15 @@ exports.UserLightning = class UserLightning {
 
     async sendPayment(request) {
         return this._promisify('sendPaymentSync', request)
+    }
+
+    static countDeltaBalance(balance1, balance2) {
+        console.log(balance1, balance2)
+        const result = {
+            total_balance: balance2.total_balance - balance1.total_balance,
+            confirmed_balance: balance2.confirmed_balance - balance1.confirmed_balance,
+            unconfirmed_balance: balance2.unconfirmed_balance - balance1.unconfirmed_balance,
+        }
+        return result
     }
 }

@@ -100,12 +100,6 @@ async function main() {
       const aliceCharliePaymentResponse = await alice.sendPayment({ payment_request: charlieInvoice.payment_request })
       console.log('aliceCharliePaymentResponse', aliceCharliePaymentResponse, 'attempt', attemptCounter)
       payment_error = aliceCharliePaymentResponse.payment_error
-      try {
-        const routes = await alice.queryRoutes({ pub_key: charliePubKey, amt: 10000 })
-        console.log(routes.routes[0])
-      } catch (e) {
-        console.log(e)
-      }
     } while (payment_error)
 
     UtilsInstance.setProduceBlocks(true)
@@ -132,9 +126,9 @@ async function main() {
   await bob.disconnectAllPeers()
   await charlie.disconnectAllPeers()
 
-  console.log('alice wallet balance', UserLightning.countDeltaBalance(aliceWalletBalance, await alice.walletBalance({})))
-  console.log('bob wallet balance', UserLightning.countDeltaBalance(bobWalletBalance, await bob.walletBalance({})))
-  console.log('charlie wallet balance', UserLightning.countDeltaBalance(charlieWalletBalance, await charlie.walletBalance({})))
+  console.log('alice wallet balance delta', UserLightning.countDeltaBalance(aliceWalletBalance, await alice.walletBalance({})))
+  console.log('bob wallet balance delta', UserLightning.countDeltaBalance(bobWalletBalance, await bob.walletBalance({})))
+  console.log('charlie wallet balance delta', UserLightning.countDeltaBalance(charlieWalletBalance, await charlie.walletBalance({})))
   process.exit()
 }
 main()
