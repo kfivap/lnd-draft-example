@@ -35,7 +35,7 @@ exports.InvoiceLightning = class InvoiceLightning {
         return new Promise((resolve, reject) => {
             call.on('data', (response) => {
                 // A response was received from the server.
-                console.log(this._name, 'subscribeSingleInvoice data', response);
+                // console.log(this._name, 'subscribeSingleInvoice data', response);
             });
             call.on('status', (status) => {
                 // The current status of the stream.

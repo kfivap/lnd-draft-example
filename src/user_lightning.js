@@ -149,12 +149,25 @@ exports.UserLightning = class UserLightning {
         return this._promisify('sendPaymentSync', request)
     }
 
-    static countDeltaBalance(balance1, balance2) {
-        console.log(balance1, balance2)
+    async channelBalance(request) {
+        return this._promisify('channelBalance', request)
+    }
+
+    static countDeltaWalletBalance(balance1, balance2) {
         const result = {
             total_balance: balance2.total_balance - balance1.total_balance,
             confirmed_balance: balance2.confirmed_balance - balance1.confirmed_balance,
             unconfirmed_balance: balance2.unconfirmed_balance - balance1.unconfirmed_balance,
+        }
+        return result
+    }
+
+    static countDeltaChannelBalance(balance1, balance2) {
+        const result = {
+            balance: balance2.balance - balance1.balance,
+            pending_open_balance: balance2.pending_open_balance - balance1.pending_open_balance,
+            local_balance: balance2.local_balance.sat - balance1.local_balance.sat,
+            remote_balance: balance2.remote_balance.sat - balance1.remote_balance.sat,
         }
         return result
     }

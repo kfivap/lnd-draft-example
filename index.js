@@ -126,9 +126,9 @@ async function main() {
   await bob.disconnectAllPeers()
   await charlie.disconnectAllPeers()
 
-  console.log('alice wallet balance delta', UserLightning.countDeltaBalance(aliceWalletBalance, await alice.walletBalance({})))
-  console.log('bob wallet balance delta', UserLightning.countDeltaBalance(bobWalletBalance, await bob.walletBalance({})))
-  console.log('charlie wallet balance delta', UserLightning.countDeltaBalance(charlieWalletBalance, await charlie.walletBalance({})))
+  console.log('alice wallet balance delta', UserLightning.countDeltaWalletBalance(aliceWalletBalance, await alice.walletBalance({})))
+  console.log('bob wallet balance delta', UserLightning.countDeltaWalletBalance(bobWalletBalance, await bob.walletBalance({})))
+  console.log('charlie wallet balance delta', UserLightning.countDeltaWalletBalance(charlieWalletBalance, await charlie.walletBalance({})))
   process.exit()
 }
 main()
